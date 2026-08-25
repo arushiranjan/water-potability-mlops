@@ -5,3 +5,5 @@ kaggle
 dotenv
 scikit-learn
 yaml
+pydantic
+fastapi
