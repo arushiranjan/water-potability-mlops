@@ -1,0 +1,7 @@
+dvc
+numpy
+pandas
+kaggle
+dotenv
+scikit-learn
+yaml
