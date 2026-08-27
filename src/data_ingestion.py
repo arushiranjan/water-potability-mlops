@@ -8,41 +8,73 @@ import yaml
 load_dotenv()
 
 # Load parameters
-with open("params.yaml", "r") as file:
-    params = yaml.safe_load(file)
-test_size = params["data_ingestion"]["test_size"]
+def load_params(filepath: str) -> float:
+    try: 
+        with open(filepath, "r") as file:
+            params = yaml.safe_load(file)
+        return params["data_ingestion"]["test_size"]
+    except Exception as e:
+        raise Exception(f"Error ocurred while loading parameters from {filepath}: {e}")
 
-# Download dataset from Kaggle
-KAGGLE_API_TOKEN = os.getenv("KAGGLE_API_TOKEN")
-DATASET_NAME = os.getenv("DATASET_NAME")
-if not KAGGLE_API_TOKEN:
-    raise ValueError("KAGGLE_API_TOKEN not found")
-if not DATASET_NAME:
-    raise ValueError("DATASET_NAME not found")
+def load_data(dataset: str, filename: str) -> pd.DataFrame:
+    try:
+        api = KaggleApi()
+        api.authenticate()
+        os.makedirs("data/raw", exist_ok=True)
 
-os.environ["KAGGLE_API_TOKEN"] = KAGGLE_API_TOKEN
+        api.dataset_download_file(dataset, filename, path="data/raw", force=True)
 
-api = KaggleApi()
-api.authenticate()
+        # Read downloaded CSV
+        data = pd.read_csv(os.path.join("data", "raw", filename))
+        return data
+    except Exception as e:
+            raise Exception(f"Error ocurred while loading data: {e}")
+    
+
+def split_data(data: pd.DataFrame, test_size:float):
+    try:
+        return train_test_split(data, test_size=test_size, random_state=42)
+    except ValueError as e:
+        raise ValueError(f"Error splitting data: {e}")
 
 
-RAW_FILE_NAME = os.getenv("RAW_FILE_NAME")
-if not RAW_FILE_NAME:
-    raise ValueError("RAW_FILE_NAME not found")
-api.dataset_download_file(DATASET_NAME, RAW_FILE_NAME, path="data/raw", force=True)
+def save_data(train_data: pd.DataFrame, test_data: pd.DataFrame):
+    try: 
+        # Save train/test data
+        data_path = os.path.join("data", "raw")
+        os.makedirs(data_path, exist_ok=True)
+
+        train_data.to_csv(os.path.join(data_path, "train.csv"), index=False)
+        test_data.to_csv(os.path.join(data_path, "test.csv"), index=False)
+
+        print("Data ingestion completed successfully.")
+    except Exception as e:
+        raise Exception(f"Error ocurred while saving data: {e}")
 
 
-# Read downloaded CSV
-data = pd.read_csv(os.path.join("data", "raw", RAW_FILE_NAME))
+def main():
 
-# Train-test split
-train_data, test_data = train_test_split(data, test_size=test_size, random_state=42)
+    test_size = load_params("params.yaml")
 
-# Save train/test data
-data_path = os.path.join("data", "raw")
-os.makedirs(data_path, exist_ok=True)
+    # Download dataset from Kaggle
+    KAGGLE_API_TOKEN = os.getenv("KAGGLE_API_TOKEN")
+    DATASET_NAME = os.getenv("DATASET_NAME")
+    RAW_FILE_NAME = os.getenv("RAW_FILE_NAME")
 
-train_data.to_csv(os.path.join(data_path, "train.csv"), index=False)
-test_data.to_csv(os.path.join(data_path, "test.csv"), index=False)
+    if not KAGGLE_API_TOKEN:
+        raise ValueError("KAGGLE_API_TOKEN not found")
+    if not DATASET_NAME:
+        raise ValueError("DATASET_NAME not found")
+    if not RAW_FILE_NAME:
+        raise ValueError("RAW_FILE_NAME not found")
 
-print("Data ingestion completed successfully.")
+    os.environ["KAGGLE_API_TOKEN"] = KAGGLE_API_TOKEN
+
+    data = load_data(DATASET_NAME, RAW_FILE_NAME)
+
+    train_data, test_data = split_data(data, test_size)
+
+    save_data(train_data, test_data)
+
+if __name__=="__main__":
+    main()
