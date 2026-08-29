@@ -9,6 +9,7 @@ from sklearn.metrics import (
     recall_score,
     f1_score
 )
+from dvclive import Live
 
 
 # X_test = test_data.iloc[:, 0:-1].values
@@ -52,6 +53,14 @@ def evaluate(model: RandomForestClassifier, X_test: pd.DataFrame, y_test: pd.Dat
             "recall": recall,
             "f1_score": f1score
         }
+
+        # save in dvclive
+        with Live(save_dvc_exp=True) as live:
+            live.log_metric("acc", acc)
+            live.log_metric("precision", pre)
+            live.log_metric("recall", recall)
+            live.log_metric("fl_score", f1score)
+            
         return metrics_dict
     except Exception as e:
         raise Exception(f"Error while evaluating: {e}")

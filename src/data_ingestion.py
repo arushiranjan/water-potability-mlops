@@ -4,6 +4,8 @@ from dotenv import load_dotenv
 from kaggle.api.kaggle_api_extended import KaggleApi
 from sklearn.model_selection import train_test_split
 import yaml
+from dvclive import Live
+
 
 load_dotenv()
 
@@ -55,6 +57,9 @@ def save_data(train_data: pd.DataFrame, test_data: pd.DataFrame):
 def main():
 
     test_size = load_params("params.yaml")
+
+    with Live(save_dvc_exp=True) as live:
+        live.log_param("test_size", test_size)
 
     # Download dataset from Kaggle
     KAGGLE_API_TOKEN = os.getenv("KAGGLE_API_TOKEN")

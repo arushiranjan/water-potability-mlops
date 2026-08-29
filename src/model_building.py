@@ -3,6 +3,7 @@ import os
 import pickle
 import yaml
 from sklearn.ensemble import RandomForestClassifier
+from dvclive import Live
 
 def load_params(path: str) -> int:
     try: 
@@ -49,6 +50,8 @@ def main():
     try:
 
         n_estimators = load_params("params.yaml")
+        with Live(save_dvc_exp=True) as live:
+            live.log_param("n_estimators", n_estimators)
         data_path = "./data/processed/train_processed.csv"
         save_path = "models/model.pkl"
         data = load_data(data_path)

@@ -7,3 +7,7 @@ scikit-learn
 yaml
 pydantic
 fastapi
+
+cookiecutter
+dvc[s3]
+dvclive
