@@ -11,3 +11,4 @@ fastapi
 cookiecutter
 dvc[s3]
 dvclive
+mlflow

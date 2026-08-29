@@ -10,7 +10,29 @@ from sklearn.metrics import (
     f1_score
 )
 from dvclive import Live
+import mlflow
+from dotenv import load_dotenv
 
+
+# configure dagshub
+load_dotenv()
+repo_owner = os.getenv("DAGSHUB_USERNAME")
+repo_name = os.getenv("DAGSHUB_REPO")
+token = os.getenv("MLOPS_DAGSHUB_TOKEN")
+
+if not repo_owner:
+    raise ValueError("DAGSHUB_USERNAME not found")
+
+if not repo_name:
+    raise ValueError("DAGSHUB_REPO not found")
+
+if not token:
+    raise ValueError("MLOPS_DAGSHUB_TOKEN not found")
+
+mlflow.set_tracking_uri(f"https://dagshub.com/{repo_owner}/{repo_name}.mlflow")
+
+os.environ["MLFLOW_TRACKING_USERNAME"] = repo_owner
+os.environ["MLFLOW_TRACKING_PASSWORD"] = token
 
 # X_test = test_data.iloc[:, 0:-1].values
 # y_test = test_data.iloc[:, -1].values
@@ -54,14 +76,22 @@ def evaluate(model: RandomForestClassifier, X_test: pd.DataFrame, y_test: pd.Dat
             "f1_score": f1score
         }
 
-        # save in dvclive
-        with Live(save_dvc_exp=True) as live:
-            live.log_metric("acc", acc)
-            live.log_metric("precision", pre)
-            live.log_metric("recall", recall)
-            live.log_metric("fl_score", f1score)
-            
+        # # save in dvclive
+        # with Live(save_dvc_exp=True) as live:
+        #     live.log_metric("acc", acc)
+        #     live.log_metric("precision", pre)
+        #     live.log_metric("recall", recall)
+        #     live.log_metric("fl_score", f1score)
+
+        mlflow.set_experiment("water-potability")
+        with mlflow.start_run():  # since no name provided, it will run inside default folder
+            mlflow.log_metric("acc", acc)
+            mlflow.log_metric("precision", pre)
+            mlflow.log_metric("recall", recall)
+            mlflow.log_metric("fl_score", f1score)
+
         return metrics_dict
+    
     except Exception as e:
         raise Exception(f"Error while evaluating: {e}")
 

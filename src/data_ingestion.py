@@ -5,9 +5,28 @@ from kaggle.api.kaggle_api_extended import KaggleApi
 from sklearn.model_selection import train_test_split
 import yaml
 from dvclive import Live
+import mlflow
 
-
+# configure dagshub 
 load_dotenv()
+repo_owner = os.getenv("DAGSHUB_USERNAME")
+repo_name = os.getenv("DAGSHUB_REPO")
+token = os.getenv("MLOPS_DAGSHUB_TOKEN")
+
+if not repo_owner:
+    raise ValueError("DAGSHUB_USERNAME not found")
+
+if not repo_name:
+    raise ValueError("DAGSHUB_REPO not found")
+
+if not token:
+    raise ValueError("MLOPS_DAGSHUB_TOKEN not found")
+
+mlflow.set_tracking_uri(f"https://dagshub.com/{repo_owner}/{repo_name}.mlflow")
+
+os.environ["MLFLOW_TRACKING_USERNAME"] = repo_owner
+os.environ["MLFLOW_TRACKING_PASSWORD"] = token
+
 
 # Load parameters
 def load_params(filepath: str) -> float:
@@ -56,30 +75,31 @@ def save_data(train_data: pd.DataFrame, test_data: pd.DataFrame):
 
 def main():
 
-    test_size = load_params("params.yaml")
+        test_size = load_params("params.yaml")
+        mlflow.log_param("test_size", test_size)
+        
+        # with Live(save_dvc_exp=True) as live:
+        #     live.log_param("test_size", test_size)
 
-    with Live(save_dvc_exp=True) as live:
-        live.log_param("test_size", test_size)
+        # Download dataset from Kaggle
+        KAGGLE_API_TOKEN = os.getenv("KAGGLE_API_TOKEN")
+        DATASET_NAME = os.getenv("DATASET_NAME")
+        RAW_FILE_NAME = os.getenv("RAW_FILE_NAME")
 
-    # Download dataset from Kaggle
-    KAGGLE_API_TOKEN = os.getenv("KAGGLE_API_TOKEN")
-    DATASET_NAME = os.getenv("DATASET_NAME")
-    RAW_FILE_NAME = os.getenv("RAW_FILE_NAME")
+        if not KAGGLE_API_TOKEN:
+            raise ValueError("KAGGLE_API_TOKEN not found")
+        if not DATASET_NAME:
+            raise ValueError("DATASET_NAME not found")
+        if not RAW_FILE_NAME:
+            raise ValueError("RAW_FILE_NAME not found")
 
-    if not KAGGLE_API_TOKEN:
-        raise ValueError("KAGGLE_API_TOKEN not found")
-    if not DATASET_NAME:
-        raise ValueError("DATASET_NAME not found")
-    if not RAW_FILE_NAME:
-        raise ValueError("RAW_FILE_NAME not found")
+        os.environ["KAGGLE_API_TOKEN"] = KAGGLE_API_TOKEN
 
-    os.environ["KAGGLE_API_TOKEN"] = KAGGLE_API_TOKEN
+        data = load_data(DATASET_NAME, RAW_FILE_NAME)
 
-    data = load_data(DATASET_NAME, RAW_FILE_NAME)
+        train_data, test_data = split_data(data, test_size)
 
-    train_data, test_data = split_data(data, test_size)
-
-    save_data(train_data, test_data)
+        save_data(train_data, test_data)
 
 if __name__=="__main__":
     main()
